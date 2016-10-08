@@ -89,7 +89,7 @@ function updateSys {
 	sudo mv /etc/apt/sources.list /etc/apt/sources.list.bak
 	# Enable update sources in /etc/apt/sources.list
 	sudo sh -c "echo deb http://security.ubuntu.com/ubuntu/ $UBUNTU-security main universe >> /etc/apt/sources.list"
-    sudo sh -c "echo deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe >> /etc/apt/sources.list"
+	sudo sh -c "echo deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe >> /etc/apt/sources.list"
 	# TODO modify /etc/apt/apt.conf.d/10periodic and 50unattended-upgrades  with the settings needed (1,1,0,1) (sed)
 	# enable noncritical update check
 	gsettings set com.ubuntu.update-notifier regular-auto-launch-interval 0
@@ -110,5 +110,9 @@ else
 	CUR_USER=$USER
 fi
 echo "Hello $CUR_USER! You must have admin priviliges to use this program"
+echo "If you don't, then the script will fail"
+echo "Setting up requisite files....."
+# call userdump
+userDump
 mkdir log
-# call userdump 
+touch script.lock
