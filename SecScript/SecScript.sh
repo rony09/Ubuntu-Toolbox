@@ -9,8 +9,8 @@
 # Set these settings to match your installation details
 
 # Set this to the codename of your Ubuntu (e.g. karmic, trusty, etc)
-# CHANGE THIS!!!!!
-UBUNTU="Ubuntu_Version"
+# leave blank if you want the script to automatically configure it
+UBUNTU=""
 
 # Set this to the name of the file that contains the usernames of the authorized users
 # a default entry has been provided to the empty one supplied with the script
@@ -29,6 +29,7 @@ PASSWORD="my_great_password"
 
 ###########Core Function Block#############
 VERSION="V0.4b5"
+
 function printLog {
 	MESSAGE="$1"
 	echo $MESSAGE
@@ -50,12 +51,12 @@ function logFile {
 ###############Function Block#############
 function userDump {
 	# printLog "Reading user files" /etc/status.log /etc/user.log
-	#get actual users from passwd file
-	#first extract the username and UID
+	# get actual users from passwd file
+	# first extract the username and UID
 	awk -F':' '{print $1":"$3}' /etc/passwd | \
-	#next only select UIDs greater than 1000 through (ones less are system users)
+	# next only select UIDs greater than 1000 through (ones less are system users)
 	 grep -E ':[1-9][0-9]{3}$' | \
-	 #then get rid of the UID portion and put the users in a file
+	 # then get rid of the UID portion and put the users in a file
 	  cut -f 1 -d ':' > alluser.txt
 }
 function userMatch {
@@ -123,6 +124,21 @@ function updateSys {
 	  apt-get dist-upgrade -y | tee -a log/updates.log
 }
 
+function debugInfo {
+cat <<EOF
+DEBUG INFO
+
+VAR Dumps:
+Ubuntu codename: $UBUNTU
+Current user: $CUR_USER
+Authorized user file: $AUTH_USER_FILE
+Authorized admin file: $AUTH_ADMIN_FILE
+
+USERS found:
+cat alluser.txt
+EOF
+}
+
 function setupIntEnv {
 	echo "Welcome to the SecScrypt utility!"
 	printf "Are you $USER? [Y/n]: " #test current user so we don't mess up its account
@@ -151,6 +167,9 @@ function setupIntEnv {
 	# call userdump
 	userDump
 	printf "[SUCCESS]\n"
+	if [ "$UBUNTU" == "" ]; then
+		UBUNTU=$(cat /etc/lsb-release | grep DISTRIB_CODENAME | cut -d '=' -f 2)
+	fi
 	logFile "SecScript $VERSION initialized\n Current user is $CUR_USER" log/status.log
 	echo "Done with setup!"
 	sleep 2s
@@ -173,6 +192,7 @@ while true; do
 	echo "9. PAM history setter"
 	echo "u. Utility"
 	echo "a. About"
+	echo "d. Debug info"
 	echo "q. Quit"
 	printf "Choose an option: "
 	read ANSWER
@@ -203,6 +223,9 @@ while true; do
 			;;
 		"a")
 			echo
+			;;
+		"d")
+			debugInfo
 			;;
 		"q")
 			printLog "User requested script exit. Script exiting..." log/status.log
