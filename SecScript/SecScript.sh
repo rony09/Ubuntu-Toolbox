@@ -30,7 +30,11 @@ PASSWORD="my_great_password"
 ###########Core Function Block#############
 VERSION="V0.4b4"
 function printLog {
-	echo "["$(date +%Y/%m/%d_%H:%M:%S)"]"$1 | tee -a $2
+	MESSAGE=$1
+	shift
+	while [ "$1" -ne  "" ]; do 
+		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE | tee -a $1
+	done
 }
 function logFile {
 	echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$1 >> $2
@@ -79,6 +83,7 @@ function adminChk {
 	printLog "Admin check finished" log/status.log log/user.log
 }
 function autoPass {
+	printLog "Starting Admin check operation" log/status.log log/passwordChanges.log
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! [ "$USERDUMP" == "$CUR_USER" ]; then
