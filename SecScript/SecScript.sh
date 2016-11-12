@@ -41,7 +41,7 @@ function userDump {
 	# printLog "Reading user files" /etc/status.log /etc/user.log
 	#get actual users from passwd file
 	#first extract the username and UID
-	sudo awk -F':' '{print $1":"$3}' /etc/passwd | \
+	awk -F':' '{print $1":"$3}' /etc/passwd | \
 	#next only select UIDs greater than 1000 through (ones less are system users)
 	 grep -E ':[1-9][0-9]{3}$' | \
 	 #then get rid of the UID portion and put the users in a file
@@ -83,32 +83,32 @@ function autoPass {
 	while read USERDUMP; do
 		if ! $USERDUMP -eq $CUR_USER; then 
 			printLog "Changing password for $USERDUMP to $PASSWORD" log/passwordChanges.log
-			echo "$USERDUMP:$PASSWORD" | sudo chpasswd #batch change the passwords
+			echo "$USERDUMP:$PASSWORD" | chpasswd #batch change the passwords
 		fi
 	done
 }
 function servRemove {
 	ps | less
-	sudo apt-get purge netcat -y
-	sudo apt-get purge samba -y
-	sudo apt-get purge vsftpd -y
-	sudo apt-get autoremove -y
+	apt-get purge netcat -y
+	apt-get purge samba -y
+	apt-get purge vsftpd -y
+	apt-get autoremove -y
 }
 function firewall {
-	sudo apt-get install gufw -y
-	sudo ufw enable
+	apt-get install gufw -y
+	ufw enable
 }
 function updateSys {
 	sudo mv /etc/apt/sources.list /etc/apt/sources.list.bak
 	# Enable update sources in /etc/apt/sources.list
-	sudo sh -c "echo deb http://security.ubuntu.com/ubuntu/ $UBUNTU-security main universe >> /etc/apt/sources.list"
-	sudo sh -c "echo deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe >> /etc/apt/sources.list"
+	echo "deb http://security.ubuntu.com/ubuntu/ $UBUNTU-security main universe" >> /etc/apt/sources.list
+	echo "deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe" >> /etc/apt/sources.list
 	# TODO modify /etc/apt/apt.conf.d/10periodic and 50unattended-upgrades with the settings needed (1,1,0,1) (sed)
 	# enable noncritical update check
 	gsettings set com.ubuntu.update-notifier regular-auto-launch-interval 0
 	# run upgrades
-	sudo apt-get update >> log/updates.log
-	sudo apt-get dist-upgrade -y | tee -a log/updates.log
+	  apt-get update >> log/updates.log
+	  apt-get dist-upgrade -y | tee -a log/updates.log
 }
 function pamSet {
 	
