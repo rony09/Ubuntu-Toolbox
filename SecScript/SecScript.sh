@@ -140,7 +140,7 @@ function setupIntEnv {
 	fi
 	echo "Creating folders and files....."
 	mkdir log
-	printLog "SecScript started" /log/status.log
+	printLog "SecScript started" log/status.log
 	printf "Reading user list....."
 	# call userdump
 	userDump
