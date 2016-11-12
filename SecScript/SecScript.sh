@@ -27,12 +27,18 @@ PASSWORD="my_great_password"
 
 
 
-###########Function Block################
-VERSION = V0.4b3
-printLog {
-	echo $1 > tee -a $2
+###########Core Function Block#############
+VERSION = V0.4b4
+function printLog {
+	echo "["$(date +%Y/%m/%d_%H:%M:%S)"]"$1 > tee -a $2
 }
+function logFile {
+	echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$1 >> $2
+}
+
+###############Function Block#############
 function userDump {
+	# printLog "Reading user files" /etc/status.log /etc/user.log
 	#get actual users from passwd file
 	#first extract the username and UID
 	sudo awk -F':' '{print $1":"$3}' /etc/passwd | \
@@ -40,10 +46,6 @@ function userDump {
 	 grep -E ':[1-9][0-9]{3}$' | \
 	 #then get rid of the UID portion and put the users in a file
 	  cut -f 1 -d ':' > alluser.txt
-	if [[ $? -ne 0 ]]; then
-		printf "[FAILED]\n Are you root? Script exiting..."
-		exit 1
-	fi
 }
 function userMatch {
 	#find the unauthorized users by matching all the users with a authorized user list
@@ -80,7 +82,7 @@ function autoPass {
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! $USERDUMP -eq $CUR_USER; then 
-			echo "Changing password for $USERDUMP to $PASSWORD" | tee -a log/passwordChanges.log
+			printLog "Changing password for $USERDUMP to $PASSWORD" log/passwordChanges.log
 			echo "$USERDUMP:$PASSWORD" | sudo chpasswd #batch change the passwords
 		fi
 	done
@@ -101,12 +103,15 @@ function updateSys {
 	# Enable update sources in /etc/apt/sources.list
 	sudo sh -c "echo deb http://security.ubuntu.com/ubuntu/ $UBUNTU-security main universe >> /etc/apt/sources.list"
 	sudo sh -c "echo deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe >> /etc/apt/sources.list"
-	# TODO modify /etc/apt/apt.conf.d/10periodic and 50unattended-upgrades  with the settings needed (1,1,0,1) (sed)
+	# TODO modify /etc/apt/apt.conf.d/10periodic and 50unattended-upgrades with the settings needed (1,1,0,1) (sed)
 	# enable noncritical update check
 	gsettings set com.ubuntu.update-notifier regular-auto-launch-interval 0
 	# run upgrades
-	sudo apt-get update
-	sudo apt-get dist-upgrade -y
+	sudo apt-get update >> log/updates.log
+	sudo apt-get dist-upgrade -y | tee -a log/updates.log
+}
+function pamSet {
+	
 }
 function setupIntEnv {
 	echo "Welcome to the SecScrypt utility!"
@@ -122,13 +127,21 @@ function setupIntEnv {
 	echo "If you don't, then the script will fail"
 	sleep 1s
 	echo "Setting up"
+	echo "Checking if you followed INSTRUCTIONS and ran this script as root..."
+	if [ "$EUID" -ne 0 ]; then 
+		echo "This script is not root. Run this script as ROOT!"
+  		exit
+  	else
+  		echo "Script is root!"
+	fi
 	echo "Creating folders and files....."
 	mkdir log
+	printLog "SecScript started" /log/status.log
 	printf "Reading user list....."
 	# call userdump
 	userDump
 	printf "[SUCCESS]\n"
-	echo "SecScript $VERSION initialized\n Current user is $CUR_USER" > log/status.log
+	logFile "SecScript $VERSION initialized\n Current user is $CUR_USER" log/status.log
 	echo "Done with setup!"
 	sleep 2s
 }
@@ -148,6 +161,7 @@ while true; do
 	echo "6. Firewall"
 	echo "7. Lost media file remover "
 	echo "8. Enable update sources and update system"
+	echo "9. PAM history setter"
 	echo "u. Utility"
 	echo "a. About"
 	echo "q. Quit"
@@ -181,7 +195,7 @@ while true; do
 			echo
 			;;
 		"q")
-			printLog "User reqested script exit. Script exiting..." log/status.log
+			printLog "User requested script exit. Script exiting..." log/status.log
 			exit 0
 			;;
 		*)
