@@ -28,9 +28,9 @@ PASSWORD="my_great_password"
 
 
 ###########Core Function Block#############
-VERSION = V0.4b4
+VERSION="V0.4b4"
 function printLog {
-	echo "["$(date +%Y/%m/%d_%H:%M:%S)"]"$1 > tee -a $2
+	echo "["$(date +%Y/%m/%d_%H:%M:%S)"]"$1 | tee -a $2
 }
 function logFile {
 	echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$1 >> $2
@@ -81,7 +81,7 @@ function adminChk {
 function autoPass {
 	cat alluser.txt | \
 	while read USERDUMP; do
-		if ! $USERDUMP -eq $CUR_USER; then 
+		if ! [ "$USERDUMP" == "$CUR_USER" ]; then 
 			printLog "Changing password for $USERDUMP to $PASSWORD" log/passwordChanges.log
 			echo "$USERDUMP:$PASSWORD" | chpasswd #batch change the passwords
 		fi
@@ -110,14 +110,12 @@ function updateSys {
 	  apt-get update >> log/updates.log
 	  apt-get dist-upgrade -y | tee -a log/updates.log
 }
-function pamSet {
-	
-}
+
 function setupIntEnv {
 	echo "Welcome to the SecScrypt utility!"
 	printf "Are you $USER? [Y/n]: " #test current user so we don't mess up its account
 	read ANSWER
-	if ANSWER -eq "n" || ANSWER -eq "N"; then
+	if [ "$ANSWER" == "n" ] || [ "$ANSWER" == "N" ]; then
 		printf "Please enter your username: "
 		read CUR_USER
 	else 
@@ -150,7 +148,6 @@ function setupIntEnv {
 ##############Main Block###############
 setupIntEnv
 while true; do
-	clear
 	echo "Sec Script $VERSION\n"
 	echo "Please choose an option:"
 	echo "1. Guided everything"
@@ -182,6 +179,7 @@ while true; do
 			;;
 		"5")
 			servRemove
+			;;
 		"6") 
 			firewall
 			;;
@@ -202,4 +200,5 @@ while true; do
 			echo "$ANSWER is not a option. Did you mistype something?"
 			;;	
 	esac
+	sleep 2s
 done
