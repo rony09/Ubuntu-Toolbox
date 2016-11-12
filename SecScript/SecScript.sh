@@ -1,5 +1,5 @@
 #!/bin/bash
-# Auto-sec script V0.4b3
+# Auto-sec script V0.4b5
 #############Disclaimer###############
 # Please attribute if you copy. modify, or distribute
 # No warranty, support, or guarantee has been provided for this script 
@@ -9,7 +9,7 @@
 # Set these settings to match your installation details
 
 # Set this to the codename of your Ubuntu (e.g. karmic, trusty, etc)
-# leave blank if you want the script to automatically configure it
+# Leave blank if you want the script to automatically configure it
 UBUNTU=""
 
 # Set this to the name of the file that contains the usernames of the authorized users
@@ -101,7 +101,7 @@ function autoPass {
 	done
 }
 function servRemove {
-	ps | less
+	ps -ef | grep [v]sftpd
 	apt-get purge netcat -y
 	apt-get purge samba -y
 	apt-get purge vsftpd -y
@@ -139,7 +139,14 @@ cat alluser.txt
 EOF
 }
 
-function setupIntEnv {
+function cleanup {
+	printLog "Interupt recieved, exiting...." /log/status.log
+	rm badusers.txt
+	rm badadmins.txt
+	exit
+}
+
+function setupIntEnv { # setup initial environment
 	echo "Welcome to the SecScrypt utility!"
 	printf "Are you $USER? [Y/n]: " #test current user so we don't mess up its account
 	read ANSWER
@@ -161,25 +168,49 @@ function setupIntEnv {
   		echo "Script is root!"
 	fi
 	echo "Creating folders and files....."
-	mkdir log
-	printLog "SecScript started" log/status.log
-	printf "Reading user list....."
-	# call userdump
+	mkdir log tmp
+	logFile "SecScript started" log/status.log
+	printLog "Building user list..." log/status.log
 	userDump
-	printf "[SUCCESS]\n"
+	printLog "Checking ubuntu codename..." /log/status.log
 	if [ "$UBUNTU" == "" ]; then
 		UBUNTU=$(cat /etc/lsb-release | grep DISTRIB_CODENAME | cut -d '=' -f 2)
+		printLog "Ubuntu codename found: $UBUNTU" /log/status.log
+	else 
+		printLog "Manual Ubuntu codename override found: $UBUNTU"
 	fi
-	logFile "SecScript $VERSION initialized\n Current user is $CUR_USER" log/status.log
+	logFile "SecScript $VERSION initialized" log/status.log
+	logFile "User is $CUR_USER" log/status.log
 	echo "Done with setup!"
 	sleep 2s
 }
 
-
+function utilityMenu {
+	while true; do
+		echo "Sec Script Utility Menu"
+		echo "DEBUG MENU"
+		echo "Please choose an option:"
+		echo "d. Debug information"
+		echo "q. Quit this menu and go back to the main menu"
+		case "$1" in
+			"d")
+				debugInfo
+				;;
+			"q")
+				break
+				;;
+			*)
+				echo "$ANSWER is not a option. Did you mistype something?"
+				;;
+		esac
+	done
+}
 ##############Main Block###############
+trap cleanup SIGINT
 setupIntEnv
 while true; do
 	echo "Sec Script $VERSION\n"
+	echo "MAIN MENU"
 	echo "Please choose an option:"
 	echo "1. Guided everything"
 	echo "2. Unauthorized user remover"
@@ -190,9 +221,8 @@ while true; do
 	echo "7. Lost media file remover "
 	echo "8. Enable update sources and update system"
 	echo "9. PAM history setter"
-	echo "u. Utility"
 	echo "a. About"
-	echo "d. Debug info"
+	echo "u. Utility"
 	echo "q. Quit"
 	printf "Choose an option: "
 	read ANSWER
@@ -223,9 +253,6 @@ while true; do
 			;;
 		"a")
 			echo
-			;;
-		"d")
-			debugInfo
 			;;
 		"q")
 			printLog "User requested script exit. Script exiting..." log/status.log
