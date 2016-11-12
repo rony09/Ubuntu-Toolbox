@@ -81,7 +81,7 @@ function adminChk {
 function autoPass {
 	cat alluser.txt | \
 	while read USERDUMP; do
-		if ! [ "$USERDUMP" == "$CUR_USER" ]; then 
+		if ! [ "$USERDUMP" == "$CUR_USER" ]; then
 			printLog "Changing password for $USERDUMP to $PASSWORD" log/passwordChanges.log
 			echo "$USERDUMP:$PASSWORD" | chpasswd #batch change the passwords
 		fi
