@@ -28,17 +28,23 @@ PASSWORD="my_great_password"
 
 
 ###########Core Function Block#############
-VERSION="V0.4b4"
+VERSION="V0.4b5"
 function printLog {
-	MESSAGE=$1
+	MESSAGE="$1"
+	echo $MESSAGE
 	shift
 	while [ "$1" !=  "" ]; do 
-		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE | tee -a $1
+		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE >> $1
 		shift
 	done
 }
 function logFile {
-	echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$1 >> $2
+	MESSAGE="$1"
+	shift
+	while [ "$1" !=  "" ]; do 
+		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE >> $1
+		shift
+	done
 }
 
 ###############Function Block#############
