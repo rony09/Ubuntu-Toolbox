@@ -34,6 +34,7 @@ function printLog {
 	shift
 	while [ "$1" !=  "" ]; do 
 		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE | tee -a $1
+		shift
 	done
 }
 function logFile {
