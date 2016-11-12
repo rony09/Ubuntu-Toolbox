@@ -32,7 +32,7 @@ VERSION="V0.4b4"
 function printLog {
 	MESSAGE=$1
 	shift
-	while [ "$1" -ne  "" ]; do 
+	while [ "$1" !=  "" ]; do 
 		echo "["$(date +%Y/%m/%d_%H:%M:%S)"] "$MESSAGE | tee -a $1
 	done
 }
@@ -83,7 +83,7 @@ function adminChk {
 	printLog "Admin check finished" log/status.log log/user.log
 }
 function autoPass {
-	printLog "Starting Admin check operation" log/status.log log/passwordChanges.log
+	printLog "Starting PassChange check operation" log/status.log log/passwordChanges.log
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! [ "$USERDUMP" == "$CUR_USER" ]; then
