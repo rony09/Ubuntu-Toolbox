@@ -62,7 +62,7 @@ function userDump {
 function userMatch {
 	#find the unauthorized users by matching all the users with a authorized user list
 	#dump the processed user list into a loop line by line
-	printLog "Starting user matching operation" log/user.log /log/status.log
+	printLog "Starting user matching operation" log/user.log log/status.log
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! grep -q $USERDUMP $AUTH_USER_FILE; then
@@ -187,12 +187,13 @@ function setupIntEnv { # setup initial environment
 
 function utilityMenu {
 	while true; do
-		echo "Sec Script Utility Menu"
-		echo "DEBUG MENU"
+		echo "Sec Script $VERISON"
+		echo "UTILITY MENU:"
 		echo "Please choose an option:"
 		echo "d. Debug information"
 		echo "q. Quit this menu and go back to the main menu"
-		case "$1" in
+		read -p "Choose an option: " ANSWER
+		case $ANSWER in
 			"d")
 				debugInfo
 				;;
@@ -209,9 +210,8 @@ function utilityMenu {
 trap cleanup SIGINT
 setupIntEnv
 while true; do
-	echo "Sec Script $VERSION\n"
-	echo "MAIN MENU"
-	echo "Please choose an option:"
+	echo "Sec Script $VERSION"
+	echo "MAIN MENU:"
 	echo "1. Guided everything"
 	echo "2. Unauthorized user remover"
 	echo "3. Unauthorized admin remover"
@@ -223,9 +223,8 @@ while true; do
 	echo "9. PAM history setter"
 	echo "a. About"
 	echo "u. Utility"
-	echo "q. Quit"
-	printf "Choose an option: "
-	read ANSWER
+	echo "q. Quit" 
+	read -p "Choose an option: "ANSWER
 	case $ANSWER in 
 		"1")
 			echo "Sorry, this function has not been implemented yet!"
