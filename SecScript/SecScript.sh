@@ -224,7 +224,7 @@ while true; do
 	echo "a. About"
 	echo "u. Utility"
 	echo "q. Quit" 
-	read -p "Choose an option: "ANSWER
+	read -p "Choose an option: " ANSWER
 	case $ANSWER in 
 		"1")
 			echo "Sorry, this function has not been implemented yet!"
