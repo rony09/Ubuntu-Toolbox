@@ -1,9 +1,10 @@
 #!/bin/bash
-# Auto-sec script V0.4b5
+# Auto-sec script V0.4b5 -Now with passwording!
+
 #############Disclaimer###############
-# Please attribute if you copy. modify, or distribute
-# No warranty, support, or guarantee has been provided for this script 
-# Use at you own risk!
+# Please attribute if you copy, modify, or distribute
+# This script has been provided "as is", and any implied or express warranties are discalimed 
+# Use at your own risk!
 
 ############CONFIG BLOCK##############
 # Set these settings to match your installation details
@@ -13,17 +14,24 @@
 UBUNTU=""
 
 # Set this to the name of the file that contains the usernames of the authorized users
-# a default entry has been provided to the empty one supplied with the script
+# This should be a plaintext list with one username per line
+# A default entry has been provided to the empty one supplied with the script
 # NOTE: must be in same directory as this script
 AUTH_USER_FILE="authusers.txt"
 
-# Set this to the name of the file that contains the usernames of the authorized admins
-# a default has been provided to the empty one supplied with the script
+# Set this to the name of the file that contains the usernames of the authorized administrators
+# This should be a plaintext list with one admin name per line
+# A default has been provided to the empty one supplied with the script
 AUTH_ADMIN_FILE="authadmins.txt"
 
-# Pasword to set for all users(at leat 8 digits, one cap, one number, one symbol):
+# Password to set for all users(at leat 8 digits, one cap, one number, one symbol)
 # WRITE THIS DOWN!!!
 PASSWORD="my_great_password"
+
+# Change this to false to silence any waningprompts before deleting 
+# users groups or other dangerous script tasks
+# WARNING THIS WILL ENABLE THE SCRIPT TO DELETE USERS PERMANENTLY WITHOUT WARNING!
+INTERLOCK=true
 
 
 
@@ -65,8 +73,8 @@ function userMatch {
 	printLog "Starting user matching operation" log/user.log log/status.log
 	cat alluser.txt | \
 	while read USERDUMP; do
-		if ! grep -q $USERDUMP $AUTH_USER_FILE; then
-    		printLog "Unauthorized user found: $USERDUMP\n" log/user.log
+		if ! grep -q "^"$USERDUMP"$" $AUTH_USER_FILE; then
+    		printLog "Unauthorized user found: $USERDUMP" log/user.log
     		echo $USERDUMP >> badusers.txt
 		fi
 	done
@@ -79,9 +87,9 @@ function adminChk {
 	#grab current sudoers
 	CURSUDO=$(cat /etc/group | grep ^sudo | cut -f 4- -d ':')
 	#setup IFS to delimit based on commas
-	IFS= ","
-	for TESTADMIN in CURSUDO; do
-		if ! grep -q $TESTADMIN $AUTH_ADMIN_FILE; then
+	IFS=","
+	for TESTADMIN in "$CURSUDO"; do
+		if ! grep -q "^"$TESTADMIN"$" $AUTH_ADMIN_FILE; then
 		printLog "Unauthorized admin found: $TESTADMIN" log/user.log
 		echo $TESTADMIN >> badadmin.txt
 		fi
@@ -91,7 +99,7 @@ function adminChk {
 	printLog "Admin check finished" log/status.log log/user.log
 }
 function autoPass {
-	printLog "Starting PassChange check operation" log/status.log log/passwordChanges.log
+	printLog "Starting PassChange operation" log/status.log log/passwordChanges.log
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! [ "$USERDUMP" == "$CUR_USER" ]; then
@@ -123,6 +131,45 @@ function updateSys {
 	  apt-get update >> log/updates.log
 	  apt-get dist-upgrade -y | tee -a log/updates.log
 }
+function delUsers {
+	echo: "The following users will be PERMANENTLY DELETED:"
+	cat badusers.txt
+	echo "Options: y=yes; n=no(default); s=Let me choose"
+	read -p "Do you accept?(N/y/s): " ANSWER
+	case "$ANSWER" in
+		[Nn])
+			echo "Ok. No users will be deleted"
+			logFile "Operator canceled deletion of users"
+			;;
+		[Yy])
+			cat baduser.txt |\
+			while read USERNM; do
+				printLog "Deleting user $USERNM" log/user
+				userdel $USERNM
+			done
+			;;
+		[Ss])
+			cat baduser.txt |\
+			while read USERNM; do
+				echo "Do you want to delete user $USERNM?"
+				red -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
+				if [[ $ANSWER == [Yy] ]] then
+					userdel $USERNM
+				elif [[$answer == [Nn] ]] then
+					printLog "User overrode deletion of $USERNM. Not deleting." log/user.log
+				else
+					echo "Mangled input, assuming no"
+					printLog "User overrode deletion of $USERNM. Not deleting." log/user.log
+				fi
+			done
+			;;
+		*)
+			echo "$ANSWER is not a option. Assuming you didn't want to do anything."
+			echo "No users will be deleted"
+			logFile "Mangled operator input. Deletion of users canceled"
+			;;
+	esac
+}
 
 function debugInfo {
 cat <<EOF
@@ -135,7 +182,7 @@ Authorized user file: $AUTH_USER_FILE
 Authorized admin file: $AUTH_ADMIN_FILE
 
 USERS found:
-cat alluser.txt
+$(cat alluser.txt)
 EOF
 }
 
@@ -156,10 +203,10 @@ function setupIntEnv { # setup initial environment
 	else 
 		CUR_USER=$USER
 	fi
-	echo "Hello $CUR_USER! You must have admin priviliges to use this program"
+	echo "Hello $CUR_USER! You must have admin priviliges to use this script"
 	echo "If you don't, then the script will fail"
 	sleep 1s
-	echo "Setting up..."
+	echo -e "\nSetting up..."
 	echo "Checking if you followed INSTRUCTIONS and ran this script as root..."
 	if [ "$EUID" -ne 0 ]; then 
 		echo "This script is not root. Run this script as ROOT!"
@@ -169,7 +216,7 @@ function setupIntEnv { # setup initial environment
 	fi
 	echo "Creating folders and files....."
 	mkdir log tmp
-	logFile "SecScript started" log/status.log
+	logFile "SecScript $VERSION starting in interactive mode..." log/status.log
 	printLog "Building user list..." log/status.log
 	userDump
 	printLog "Checking ubuntu codename..." log/status.log
@@ -187,13 +234,23 @@ function setupIntEnv { # setup initial environment
 
 function utilityMenu {
 	while true; do
-		echo "Sec Script $VERISON"
+		echo "Sec Script $VERSION"
 		echo "UTILITY MENU:"
 		echo "Please choose an option:"
+		echo "1. Check for servers(listening ports) using netstat"
+		echo "2. Search for a custom process/file"
+		echo "3. Identify the location and type of a command"
 		echo "d. Debug information"
 		echo "q. Quit this menu and go back to the main menu"
 		read -p "Choose an option: " ANSWER
 		case $ANSWER in
+			"1")
+				netstat -tulnp
+				;;
+			"3")
+				read -p "Enter name of command to identify: " ANSWER
+				type -a $ANSWER
+				;;
 			"d")
 				debugInfo
 				;;
@@ -204,6 +261,7 @@ function utilityMenu {
 				echo "$ANSWER is not a option. Did you mistype something?"
 				;;
 		esac
+		sleep 2
 	done
 }
 ##############Main Block###############
@@ -251,7 +309,7 @@ while true; do
 			updateSys
 			;;
 		"a")
-			echo
+			echo ""
 			;;
 		"u")
 			utilityMenu
