@@ -159,7 +159,7 @@ function setupIntEnv { # setup initial environment
 	echo "Hello $CUR_USER! You must have admin priviliges to use this program"
 	echo "If you don't, then the script will fail"
 	sleep 1s
-	echo "Setting up"
+	echo "Setting up..."
 	echo "Checking if you followed INSTRUCTIONS and ran this script as root..."
 	if [ "$EUID" -ne 0 ]; then 
 		echo "This script is not root. Run this script as ROOT!"
@@ -172,10 +172,10 @@ function setupIntEnv { # setup initial environment
 	logFile "SecScript started" log/status.log
 	printLog "Building user list..." log/status.log
 	userDump
-	printLog "Checking ubuntu codename..." /log/status.log
+	printLog "Checking ubuntu codename..." log/status.log
 	if [ "$UBUNTU" == "" ]; then
 		UBUNTU=$(cat /etc/lsb-release | grep DISTRIB_CODENAME | cut -d '=' -f 2)
-		printLog "Ubuntu codename found: $UBUNTU" /log/status.log
+		printLog "Ubuntu codename found: $UBUNTU" log/status.log
 	else 
 		printLog "Manual Ubuntu codename override found: $UBUNTU"
 	fi
@@ -253,6 +253,9 @@ while true; do
 			;;
 		"a")
 			echo
+			;;
+		"u")
+			utilityMenu
 			;;
 		"q")
 			printLog "User requested script exit. Script exiting..." log/status.log
