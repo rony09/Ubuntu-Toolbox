@@ -266,6 +266,8 @@ function utilityMenu {
 					echo "Process not found. Searching filesystem for match..."
 					updatedb
 					locate $ANSWER
+				else
+					echo $PROCLIST
 				fi
 			"3")
 				read -p "Enter name of command to identify: " ANSWER
