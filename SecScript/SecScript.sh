@@ -33,11 +33,18 @@ PASSWORD="my_great_password"
 # WARNING THIS WILL ENABLE THE SCRIPT TO DELETE USERS PERMANENTLY WITHOUT WARNING!
 INTERLOCK=true
 
+# Log directory
+# Change if you want it to somewhere other than ./log
+LOGDIR = "log"
 
+
+###########Core Var Block#############
+VERSION="V0.4b5" # Don't edit this!!!
+STATUSLOG=$LOGDIR"/status.log"
+USERLOG=$LOGDIR"/user.log"
+PASSLOG=$LOGDIR"/password.log"
 
 ###########Core Function Block#############
-VERSION="V0.4b5"
-
 function printLog {
 	MESSAGE="$1"
 	echo $MESSAGE
@@ -70,18 +77,18 @@ function userDump {
 function userMatch {
 	#find the unauthorized users by matching all the users with a authorized user list
 	#dump the processed user list into a loop line by line
-	printLog "Starting user matching operation" log/user.log log/status.log
+	printLog "Starting user matching operation" "$USERLOG" "$STATUSLOG"
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! grep -q "^"$USERDUMP"$" $AUTH_USER_FILE; then
-    		printLog "Unauthorized user found: $USERDUMP" log/user.log
+    		printLog "Unauthorized user found: $USERDUMP" "$USERLOG"
     		echo $USERDUMP >> badusers.txt
 		fi
 	done
-	printLog "user matching operation completed" log/status.log log/user.log
+	printLog "user matching operation completed" "$STATUSLOG" "$USERLOG"
 }
 function adminChk {
-	printLog "Starting Admin check operation" log/status.log log/user.log
+	printLog "Starting Admin check operation" "$STATUSLOG" "$USERLOG"
 	#backup IFS var
 	IFSBAK=$IFS
 	#grab current sudoers
@@ -90,20 +97,20 @@ function adminChk {
 	IFS=","
 	for TESTADMIN in "$CURSUDO"; do
 		if ! grep -q "^"$TESTADMIN"$" $AUTH_ADMIN_FILE; then
-		printLog "Unauthorized admin found: $TESTADMIN" log/user.log
+		printLog "Unauthorized admin found: $TESTADMIN" "$USERLOG"
 		echo $TESTADMIN >> badadmin.txt
 		fi
 	done
 	#restore IFS
 	IFS=$IFSBAK
-	printLog "Admin check finished" log/status.log log/user.log
+	printLog "Admin check finished" "$STATUSLOG" "$USERLOG"
 }
 function autoPass {
-	printLog "Starting PassChange operation" log/status.log log/passwordChanges.log
+	printLog "Starting PassChange operation" "$STATUSLOG" "$PASSLOG"
 	cat alluser.txt | \
 	while read USERDUMP; do
 		if ! [ "$USERDUMP" == "$CUR_USER" ]; then
-			printLog "Changing password for $USERDUMP to $PASSWORD" log/passwordChanges.log
+			printLog "Changing password for $USERDUMP to $PASSWORD" "$PASSLOG"
 			echo "$USERDUMP:$PASSWORD" | chpasswd #batch change the passwords
 		fi
 	done
@@ -125,6 +132,11 @@ function updateSys {
 	echo "deb http://security.ubuntu.com/ubuntu/ $UBUNTU-security main universe" >> /etc/apt/sources.list
 	echo "deb http://us.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main universe" >> /etc/apt/sources.list
 	# TODO modify /etc/apt/apt.conf.d/10periodic and 50unattended-upgrades with the settings needed (1,1,0,1) (sed)
+	if [grep -q "APT::Periodic::Unattended-Upgrade.*" /etc/apt/apt.d.conf/10periodic]; then
+		sed -i s/APT::Periodic::Unattended-Upgrade .*\;/APT::Periodic::Unattended-Upgrade "1"\;/ /etc/apt/apt.conf.d/10periodic
+	else
+		echo "APT::Periodic::Unattended-Upgrade "1"\;" >> /etc/apt/apt.comf.d/10periodic
+	fi
 	# enable noncritical update check
 	gsettings set com.ubuntu.update-notifier regular-auto-launch-interval 0
 	# run upgrades
@@ -135,7 +147,7 @@ function delUsers {
 	echo: "The following users will be PERMANENTLY DELETED:"
 	cat badusers.txt
 	echo "Options: y=yes; n=no(default); s=Let me choose"
-	read -p "Do you accept?(N/y/s): " ANSWER
+	read -p "Delete users?(N/y/s): " ANSWER
 	case "$ANSWER" in
 		[Nn])
 			echo "Ok. No users will be deleted"
@@ -156,17 +168,17 @@ function delUsers {
 				if [[ $ANSWER == [Yy] ]] then
 					userdel $USERNM
 				elif [[$answer == [Nn] ]] then
-					printLog "User overrode deletion of $USERNM. Not deleting." log/user.log
+					printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
 				else
 					echo "Mangled input, assuming no"
-					printLog "User overrode deletion of $USERNM. Not deleting." log/user.log
+					printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
 				fi
 			done
 			;;
 		*)
 			echo "$ANSWER is not a option. Assuming you didn't want to do anything."
 			echo "No users will be deleted"
-			logFile "Mangled operator input. Deletion of users canceled"
+			logFile "Mangled operator input. Deletion of users canceled" "$USERLOG"
 			;;
 	esac
 }
@@ -187,7 +199,7 @@ EOF
 }
 
 function cleanup {
-	printLog "Interupt recieved, exiting...." /log/status.log
+	printLog "Interupt recieved, exiting...." /"$STATUSLOG"
 	rm badusers.txt
 	rm badadmins.txt
 	exit
@@ -195,7 +207,7 @@ function cleanup {
 
 function setupIntEnv { # setup initial environment
 	echo "Welcome to the SecScrypt utility!"
-	printf "Are you $USER? [Y/n]: " #test current user so we don't mess up its account
+	printf "Are you $USER? [Y/n]: " # test current user so we don't mess up its account
 	read ANSWER
 	if [ "$ANSWER" == "n" ] || [ "$ANSWER" == "N" ]; then
 		printf "Please enter your username: "
@@ -216,18 +228,18 @@ function setupIntEnv { # setup initial environment
 	fi
 	echo "Creating folders and files....."
 	mkdir log tmp
-	logFile "SecScript $VERSION starting in interactive mode..." log/status.log
-	printLog "Building user list..." log/status.log
+	logFile "SecScript $VERSION starting in interactive mode..." "$STATUSLOG"
+	printLog "Building user list..." "$STATUSLOG"
 	userDump
-	printLog "Checking ubuntu codename..." log/status.log
+	printLog "Checking ubuntu codename..." "$STATUSLOG"
 	if [ "$UBUNTU" == "" ]; then
 		UBUNTU=$(cat /etc/lsb-release | grep DISTRIB_CODENAME | cut -d '=' -f 2)
-		printLog "Ubuntu codename found: $UBUNTU" log/status.log
+		printLog "Ubuntu codename found: $UBUNTU" "$STATUSLOG"
 	else 
 		printLog "Manual Ubuntu codename override found: $UBUNTU"
 	fi
-	logFile "SecScript $VERSION initialized" log/status.log
-	logFile "User is $CUR_USER" log/status.log
+	logFile "SecScript $VERSION initialized" "$STATUSLOG"
+	logFile "User is $CUR_USER" "$STATUSLOG"
 	echo "Done with setup!"
 	sleep 2s
 }
@@ -247,6 +259,14 @@ function utilityMenu {
 			"1")
 				netstat -tulnp
 				;;
+			"2")
+				read -p "Enter process/file/deamon to find: " ANSWER
+				PROCLIST=ps -ef | grep $ANSWER | grep -v "grep"
+				if [! $PROCLIST] then
+					echo "Process not found. Searching filesystem for match..."
+					updatedb
+					locate $ANSWER
+				fi
 			"3")
 				read -p "Enter name of command to identify: " ANSWER
 				type -a $ANSWER
@@ -315,7 +335,7 @@ while true; do
 			utilityMenu
 			;;
 		"q")
-			printLog "User requested script exit. Script exiting..." log/status.log
+			printLog "User requested script exit. Script exiting..." "$STATUSLOG"
 			exit 0
 			;;
 		*)
