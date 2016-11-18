@@ -35,7 +35,7 @@ INTERLOCK=true
 
 # Log directory
 # Change if you want it to somewhere other than ./log
-LOGDIR = "log"
+LOGDIR="log"
 
 
 ###########Core Var Block#############
@@ -310,13 +310,14 @@ function utilityMenu {
 			"2")
 				read -p "Enter process/file/deamon to find: " ANSWER
 				PROCLIST=ps -ef | grep $ANSWER | grep -v "grep"
-				if [! $PROCLIST] then
+				if [! $PROCLIST]; then
 					echo "Process not found. Searching filesystem for match..."
 					updatedb
 					locate $ANSWER
 				else
 					echo $PROCLIST
 				fi
+				;;
 			"3")
 				read -p "Enter name of command to identify: " ANSWER
 				type -a $ANSWER
