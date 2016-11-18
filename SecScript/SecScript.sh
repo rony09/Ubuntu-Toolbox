@@ -43,6 +43,8 @@ VERSION="V0.6b1" # Don't edit this!!!
 STATUSLOG=$LOGDIR"/status.log"
 USERLOG=$LOGDIR"/user.log"
 PASSLOG=$LOGDIR"/password.log"
+BADUSERFILE="tmp/badusers"
+BADADMINFILE="tmp/badadmins"
 
 ###########Core Function Block#############
 function printLog {
@@ -75,6 +77,9 @@ function userDump {
 	  cut -f 1 -d ':' > alluser.txt
 }
 function userMatch {
+	if [ -e "$BADUSERFILE"]; then
+		rm $BADUSERFILE
+	fi
 	#find the unauthorized users by matching all the users with a authorized user list
 	#dump the processed user list into a loop line by line
 	printLog "Starting user matching operation" "$USERLOG" "$STATUSLOG"
@@ -82,12 +87,15 @@ function userMatch {
 	while read USERDUMP; do
 		if ! grep -q "^"$USERDUMP"$" $AUTH_USER_FILE; then
     		printLog "Unauthorized user found: $USERDUMP" "$USERLOG"
-    		echo $USERDUMP >> badusers.txt
+    		echo $USERDUMP >> $BADUSERFILE
 		fi
 	done
 	printLog "user matching operation completed" "$STATUSLOG" "$USERLOG"
 }
 function adminChk {
+	if [ -e "$BADADMINFILE"]; then
+		rm $BADADMINFILE
+	fi
 	printLog "Starting Admin check operation" "$STATUSLOG" "$USERLOG"
 	#backup IFS var
 	IFSBAK=$IFS
@@ -98,7 +106,7 @@ function adminChk {
 	for TESTADMIN in "$CURSUDO"; do
 		if ! grep -q "^"$TESTADMIN"$" $AUTH_ADMIN_FILE; then
 		printLog "Unauthorized admin found: $TESTADMIN" "$USERLOG"
-		echo $TESTADMIN >> badadmin.txt
+		echo $TESTADMIN >> $BADADMINFILE
 		fi
 	done
 	#restore IFS
@@ -144,8 +152,8 @@ function updateSys {
 	  apt-get dist-upgrade -y | tee -a log/updates.log
 }
 function delUsers {
-	echo: "The following users will be PERMANENTLY DELETED:"
-	cat badusers.txt
+	echo "The following users will be PERMANENTLY DELETED:"
+	cat $BADUSERFILE
 	echo "Options: y=yes; n=no(default); s=Let me choose"
 	read -p "Delete users?(N/y/s): " ANSWER
 	case "$ANSWER" in
@@ -154,14 +162,14 @@ function delUsers {
 			logFile "Operator canceled deletion of users"
 			;;
 		[Yy])
-			cat baduser.txt |\
+			cat $BADUSERFILE |\
 			while read USERNM; do
 				printLog "Deleting user $USERNM" log/user
 				userdel $USERNM
 			done
 			;;
 		[Ss])
-			cat baduser.txt |\
+			cat $BADUSERFILE |\
 			while read USERNM; do
 				echo "Do you want to delete user $USERNM?"
 				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
@@ -189,7 +197,7 @@ function delUsers {
 
 function demAdmin {
 	echo: "The following admins will be have admin priviliges revoked:"
-	cat badadmin.txt
+	cat $BADADMINFILE
 	echo "Options: y=yes; n=no(default); s=Let me choose"
 	read -p "Demote admins?(N/y/s): " ANSWER
 	case "$ANSWER" in
@@ -198,14 +206,14 @@ function demAdmin {
 			logFile "Operator canceled demotion of of admins"
 			;;
 		[Yy])
-			cat badadmin.txt |\
+			cat $BADADMINFILE |\
 			while read USERNM; do
 				printLog "Demoting admin $USERNM" log/user
 				deluser $USERNM sudo
 			done
 			;;
 		[Ss])
-			cat baduser.txt |\
+			cat $BADADMINFILE |\
 			while read USERNM; do
 				echo "Do you want to revoke admin priviliges from user $USERNM?"
 				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
@@ -248,8 +256,8 @@ EOF
 
 function cleanup {
 	printLog "Interupt recieved, exiting...." /"$STATUSLOG"
-	rm badusers.txt
-	rm badadmins.txt
+	rm $BADUSERFILE
+	rm $BADADMINFILE
 	exit
 }
 
