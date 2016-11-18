@@ -28,7 +28,7 @@ AUTH_ADMIN_FILE="authadmins.txt"
 # WRITE THIS DOWN!!!
 PASSWORD="my_great_password"
 
-# Change this to false to silence any waningprompts before deleting 
+# Change this to false to silence any warning prompts before deleting 
 # users groups or other dangerous script tasks
 # WARNING THIS WILL ENABLE THE SCRIPT TO DELETE USERS PERMANENTLY WITHOUT WARNING!
 INTERLOCK=true
@@ -39,7 +39,7 @@ LOGDIR = "log"
 
 
 ###########Core Var Block#############
-VERSION="V0.4b5" # Don't edit this!!!
+VERSION="V0.6b1" # Don't edit this!!!
 STATUSLOG=$LOGDIR"/status.log"
 USERLOG=$LOGDIR"/user.log"
 PASSLOG=$LOGDIR"/password.log"
@@ -164,21 +164,69 @@ function delUsers {
 			cat baduser.txt |\
 			while read USERNM; do
 				echo "Do you want to delete user $USERNM?"
-				red -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
-				if [[ $ANSWER == [Yy] ]] then
-					userdel $USERNM
-				elif [[$answer == [Nn] ]] then
-					printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
-				else
-					echo "Mangled input, assuming no"
-					printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
-				fi
+				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
+				case $ANSWER in
+					[Yy])
+						userdel $USERNM
+						;;
+					[Nn])
+						printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
+						;;
+					*)
+						echo "Mangled input, assuming no"
+						printLog "User overrode deletion of $USERNM. Not deleting." "$USERLOG"
+						;;
+				esac
 			done
 			;;
 		*)
 			echo "$ANSWER is not a option. Assuming you didn't want to do anything."
 			echo "No users will be deleted"
 			logFile "Mangled operator input. Deletion of users canceled" "$USERLOG"
+			;;
+	esac
+}
+
+function demAdmin {
+	echo: "The following admins will be have admin priviliges revoked:"
+	cat badadmin.txt
+	echo "Options: y=yes; n=no(default); s=Let me choose"
+	read -p "Demote admins?(N/y/s): " ANSWER
+	case "$ANSWER" in
+		[Nn])
+			echo "Ok. No modifications will be made to admins"
+			logFile "Operator canceled demotion of of admins"
+			;;
+		[Yy])
+			cat badadmin.txt |\
+			while read USERNM; do
+				printLog "Demoting admin $USERNM" log/user
+				deluser $USERNM sudo
+			done
+			;;
+		[Ss])
+			cat baduser.txt |\
+			while read USERNM; do
+				echo "Do you want to revoke admin priviliges from user $USERNM?"
+				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
+				case $ANSWER in
+					[Yy])
+						deluser $USERNM sudo
+						;;
+					[Nn])
+						printLog "User overrode demotion of $USERNM. Not deleting." "$USERLOG"
+						;;
+					*)
+						echo "Mangled input, assuming no"
+						printLog "User overrode demotion of $USERNM. Not deleting." "$USERLOG"
+						;;
+				esac
+			done
+			;;
+		*)
+			echo "$ANSWER is not a option. Assuming you didn't want to do anything."
+			echo "No admins will have priviliges revoked"
+			logFile "Mangled operator input. Demotion of admins canceled" "$USERLOG"
 			;;
 	esac
 }
@@ -311,9 +359,11 @@ while true; do
 			;;
 		"2")
 			userMatch
+			delUsers
 			;;
 		"3")
 			adminChk
+			demAdmin
 			;;
 		"4")
 			autoPass
