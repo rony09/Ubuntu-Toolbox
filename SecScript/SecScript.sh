@@ -77,7 +77,7 @@ function userDump {
 	  cut -f 1 -d ':' > alluser.txt
 }
 function userMatch {
-	if [ -e "$BADUSERFILE"]; then
+	if [ -e "$BADUSERFILE" ]; then
 		rm $BADUSERFILE
 	fi
 	#find the unauthorized users by matching all the users with a authorized user list
@@ -169,8 +169,7 @@ function delUsers {
 			done
 			;;
 		[Ss])
-			cat $BADUSERFILE |\
-			while read USERNM; do
+			for $USERNM in $BADUSERFILE; do
 				echo "Do you want to delete user $USERNM?"
 				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
 				case $ANSWER in
@@ -213,8 +212,7 @@ function demAdmin {
 			done
 			;;
 		[Ss])
-			cat $BADADMINFILE |\
-			while read USERNM; do
+			for $USERNM in $BADUSERFILE; do
 				echo "Do you want to revoke admin priviliges from user $USERNM?"
 				read -p "y=yes, n=no, a=all (Y/n/a): " ANSWER
 				case $ANSWER in
