@@ -1,4 +1,4 @@
-WIP readme
+WIP ReadMe
 
 Version 0.6bxx (the 0.6 beta series)
 Major new features in this version:
